@@ -1,0 +1,9 @@
+Hola 👋 Bienvenido(a) a Smartcell Academia, tu espacio de formación técnica y soluciones tecnológicas.
+🎓 Ofrecemos cursos 100% prácticos, reparaciones profesionales y materiales especializados.
+¿En qué te gustaría que te ayudemos hoy?
+
+1️⃣ Quiero ver los cursos  
+2️⃣ Necesito reparar mi celular, laptop o computadora  
+3️⃣ Tengo una consulta general  
+4️⃣ Quiero comprar herramientas  
+0️⃣ Salir
