@@ -36,16 +36,16 @@ const voiceToText = async (filePath) => {
     }
 };
 
-const  convertOggToMp3 = async (inputStream, outStream) => {
+const convertOggToMp3 = async (inputPath, outputPath) => {
     return new Promise((resolve, reject) => {
-        ffmpeg(inputStream)
+        ffmpeg(inputPath)
             .audioCodec("libmp3lame")
             .audioBitrate(96)
             .toFormat("mp3")
             .save(outputPath)
             .on("end", () => resolve(true))
             .on("error", (err) => reject(err));
-        });
+    });
 };
 
 const handlerAI = async (ctx) => {

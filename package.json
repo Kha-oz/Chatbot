@@ -20,6 +20,7 @@
         "cache-manager": "5.2.4",
         "mongodb": "^6.16.0",
         "openai": "^3.3.0",
+        "remove-accents": "^0.5.0",
         "wa-sticker-formatter": "4.4.4"
     },
     "devDependencies": {
