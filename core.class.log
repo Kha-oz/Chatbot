@@ -1,0 +1,164 @@
+[handleMsg]:  {
+  key: {
+    remoteJid: '51965728013@s.whatsapp.net',
+    fromMe: false,
+    id: '3F0B01399C684BBE9498',
+    participant: undefined
+  },
+  messageTimestamp: 1751492967,
+  pushName: 'Edu Armas',
+  broadcast: false,
+  message: Message {
+    extendedTextMessage: ExtendedTextMessage { text: 'este', contextInfo: [ContextInfo] },
+    messageContextInfo: MessageContextInfo {
+      deviceListMetadata: [DeviceListMetadata],
+      deviceListMetadataVersion: 2
+    }
+  },
+  body: 'este',
+  from: '51965728013'
+}
+[handleMsg]:  {
+  key: {
+    remoteJid: '51965728013@s.whatsapp.net',
+    fromMe: false,
+    id: '3FBB2B15C4C7A5683008',
+    participant: undefined
+  },
+  messageTimestamp: 1751492968,
+  pushName: 'Edu Armas',
+  broadcast: false,
+  message: Message {
+    extendedTextMessage: ExtendedTextMessage { text: 'hola', contextInfo: [ContextInfo] },
+    messageContextInfo: MessageContextInfo {
+      deviceListMetadata: [DeviceListMetadata],
+      deviceListMetadataVersion: 2
+    }
+  },
+  body: 'hola',
+  from: '51965728013'
+}
+[QUEUE_SE_ENVIO]:  {
+  ref: 'ans_cf584d86-6f0d-4cb0-833f-2f34f4a4348a',
+  keyword: 'key_aec0b7e0-f37f-455f-a02c-77759ff26e73',
+  answer: 'Hola 👋 Bienvenido(a) a Smartcell Academia, tu espacio de formación técnica y soluciones tecnológicas.\r\n' +
+    '🎓 Ofrecemos cursos 100% prácticos, reparaciones profesionales y materiales especializados.\r\n' +
+    '¿En qué te gustaría que te ayudemos hoy?\r\n' +
+    '\r\n' +
+    '1️⃣ Quiero ver los cursos  \r\n' +
+    '2️⃣ Necesito reparar mi celular, laptop o computadora  \r\n' +
+    '3️⃣ Tengo una consulta general  \r\n' +
+    '4️⃣ Quiero comprar herramientas  \r\n' +
+    '0️⃣ Salir\n' +
+    '\n' +
+    'Responde con el número o palabra clave de la opción que deseas.\n' +
+    'Ejemplo: "1" para cursos, "2" para reparaciones, "3" para consultar, "4" para tienda, "0" para salir.',
+  options: {
+    media: null,
+    buttons: [],
+    capture: true,
+    child: null,
+    delay: 0,
+    idle: null,
+    ref: null,
+    nested: [],
+    keyword: {},
+    callback: true
+  },
+  refSerialize: '3b806f4b106cb44ed0d54e67ca13df0f'
+}
+[QUEUE_SE_ENVIO]:  {
+  ref: 'ans_ec8080b6-b4f0-4f81-ab85-d62eb44974a1',
+  keyword: 'key_552ee9c0-a60a-4988-bfd0-25eaf413236a',
+  answer: 'Hola 👋 Bienvenido(a) a Smartcell Academia, tu espacio de formación técnica y soluciones tecnológicas.\r\n' +
+    '🎓 Ofrecemos cursos 100% prácticos, reparaciones profesionales y materiales especializados.\r\n' +
+    '¿En qué te gustaría que te ayudemos hoy?\r\n' +
+    '\r\n' +
+    '1️⃣ Quiero ver los cursos  \r\n' +
+    '2️⃣ Necesito reparar mi celular, laptop o computadora  \r\n' +
+    '3️⃣ Tengo una consulta general  \r\n' +
+    '4️⃣ Quiero comprar herramientas  \r\n' +
+    '0️⃣ Salir\n' +
+    '\n' +
+    'Responde con el número o palabra clave de la opción que deseas.\n' +
+    'Ejemplo: "1" para cursos, "2" para reparaciones, "3" para consultar, "4" para tienda, "0" para salir.',
+  options: {
+    media: null,
+    buttons: [],
+    capture: true,
+    child: null,
+    delay: 0,
+    idle: null,
+    ref: null,
+    nested: [],
+    keyword: {},
+    callback: true
+  },
+  refSerialize: '3a8dd8b1086efd12524bc54d67d6abf2'
+}
+[handleMsg]:  {
+  key: {
+    remoteJid: '51965728013@s.whatsapp.net',
+    fromMe: false,
+    id: '3F99347505607FE0FD2B',
+    participant: undefined
+  },
+  messageTimestamp: 1751492989,
+  pushName: 'Edu Armas',
+  broadcast: false,
+  message: Message {
+    extendedTextMessage: ExtendedTextMessage { text: '1', contextInfo: [ContextInfo] },
+    messageContextInfo: MessageContextInfo {
+      deviceListMetadata: [DeviceListMetadata],
+      deviceListMetadataVersion: 2
+    }
+  },
+  body: '1',
+  from: '51965728013'
+}
+[ERROR ID (ans_c22032f7-6ce0-4b4d-8580-cb0d2d085fb7)]:  TypeError: text.match is not a function
+    at extractUrlFromText (C:\Users\Julian\Desktop\copias de seguridad\Chatbot\node_modules\@whiskeysockets\baileys\lib\Utils\messages.js:41:67)
+    at generateLinkPreviewIfRequired (C:\Users\Julian\Desktop\copias de seguridad\Chatbot\node_modules\@whiskeysockets\baileys\lib\Utils\messages.js:45:48)
+    at generateWAMessageContent (C:\Users\Julian\Desktop\copias de seguridad\Chatbot\node_modules\@whiskeysockets\baileys\lib\Utils\messages.js:246:71)
+    at generateWAMessage (C:\Users\Julian\Desktop\copias de seguridad\Chatbot\node_modules\@whiskeysockets\baileys\lib\Utils\messages.js:507:102)
+    at Object.sendMessage (C:\Users\Julian\Desktop\copias de seguridad\Chatbot\node_modules\@whiskeysockets\baileys\lib\Socket\messages-send.js:614:69)
+    at BaileysProvider.sendText (C:\Users\Julian\Desktop\copias de seguridad\Chatbot\node_modules\@bot-whatsapp\provider\lib\baileys\index.cjs:645:28)
+    at BaileysProvider.sendMessage (C:\Users\Julian\Desktop\copias de seguridad\Chatbot\node_modules\@bot-whatsapp\provider\lib\baileys\index.cjs:736:21)
+    at CoreClass.sendProviderAndSave (C:\Users\Julian\Desktop\copias de seguridad\Chatbot\node_modules\@bot-whatsapp\bot\lib\bundle.bot.cjs:1561:46)
+    at Object.promiseInFunc (C:\Users\Julian\Desktop\copias de seguridad\Chatbot\node_modules\@bot-whatsapp\bot\lib\bundle.bot.cjs:1238:36)
+    at C:\Users\Julian\Desktop\copias de seguridad\Chatbot\node_modules\@bot-whatsapp\bot\lib\bundle.bot.cjs:531:38
+Error en sendProviderAndSave (ID ans_c22032f7-6ce0-4b4d-8580-cb0d2d085fb7): undefined
+Error al encolar (ID ans_c22032f7-6ce0-4b4d-8580-cb0d2d085fb7): undefined
+[handleMsg]:  {
+  key: {
+    remoteJid: '51965728013@s.whatsapp.net',
+    fromMe: false,
+    id: '3F5ADA9B56F309752A00',
+    participant: undefined
+  },
+  messageTimestamp: 1751492997,
+  pushName: 'Edu Armas',
+  broadcast: false,
+  message: Message {
+    extendedTextMessage: ExtendedTextMessage { text: '1', contextInfo: [ContextInfo] },
+    messageContextInfo: MessageContextInfo {
+      deviceListMetadata: [DeviceListMetadata],
+      deviceListMetadataVersion: 2
+    }
+  },
+  body: '1',
+  from: '51965728013'
+}
+[ERROR ID (ans_c22032f7-6ce0-4b4d-8580-cb0d2d085fb7)]:  TypeError: text.match is not a function
+    at extractUrlFromText (C:\Users\Julian\Desktop\copias de seguridad\Chatbot\node_modules\@whiskeysockets\baileys\lib\Utils\messages.js:41:67)
+    at generateLinkPreviewIfRequired (C:\Users\Julian\Desktop\copias de seguridad\Chatbot\node_modules\@whiskeysockets\baileys\lib\Utils\messages.js:45:48)
+    at generateWAMessageContent (C:\Users\Julian\Desktop\copias de seguridad\Chatbot\node_modules\@whiskeysockets\baileys\lib\Utils\messages.js:246:71)
+    at generateWAMessage (C:\Users\Julian\Desktop\copias de seguridad\Chatbot\node_modules\@whiskeysockets\baileys\lib\Utils\messages.js:507:102)
+    at Object.sendMessage (C:\Users\Julian\Desktop\copias de seguridad\Chatbot\node_modules\@whiskeysockets\baileys\lib\Socket\messages-send.js:614:69)
+    at BaileysProvider.sendText (C:\Users\Julian\Desktop\copias de seguridad\Chatbot\node_modules\@bot-whatsapp\provider\lib\baileys\index.cjs:645:28)
+    at BaileysProvider.sendMessage (C:\Users\Julian\Desktop\copias de seguridad\Chatbot\node_modules\@bot-whatsapp\provider\lib\baileys\index.cjs:736:21)
+    at CoreClass.sendProviderAndSave (C:\Users\Julian\Desktop\copias de seguridad\Chatbot\node_modules\@bot-whatsapp\bot\lib\bundle.bot.cjs:1561:46)
+    at Object.promiseInFunc (C:\Users\Julian\Desktop\copias de seguridad\Chatbot\node_modules\@bot-whatsapp\bot\lib\bundle.bot.cjs:1238:36)
+    at C:\Users\Julian\Desktop\copias de seguridad\Chatbot\node_modules\@bot-whatsapp\bot\lib\bundle.bot.cjs:531:38
+Error en sendProviderAndSave (ID ans_c22032f7-6ce0-4b4d-8580-cb0d2d085fb7): undefined
+Error al encolar (ID ans_c22032f7-6ce0-4b4d-8580-cb0d2d085fb7): undefined

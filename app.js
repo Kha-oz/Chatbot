@@ -3,250 +3,266 @@ require('dotenv').config()
 
 const QRPortalWeb = require('@bot-whatsapp/portal')
 const BaileysProvider = require('@bot-whatsapp/provider/baileys')
-//const MockAdapter = require('@bot-whatsapp/database/mock')
 const MongoAdapter = require('@bot-whatsapp/database/mongo')
 const { MongoClient } = require('mongodb')
-
-const path = require('path')
-const fs = require('fs')
-const chat = require('./ChatGPT.js')
-const { handlerAI } = require('./whisper.js')
-
-// Agregar librería para eliminar acentos
 const removeAccents = require('remove-accents')
 
-// Leer archivos de texto de forma segura
-function safeReadTxt(filePath, fallback) {
-    try {
-        return fs.readFileSync(path.join(__dirname, "mensajes", filePath), 'utf-8')
-    } catch (e) {
-        return fallback || 'Mensaje no disponible en este momento.'
-    }
-}
-
-const menu = safeReadTxt("menu.txt", "Bienvenido a Smartcell Academy. ¿En qué podemos ayudarte hoy?");
-const promptConsultas = safeReadTxt("promptConsultas.txt", "Haz tu consulta.");
-const cursoText = safeReadTxt("curso.txt", "Nuestros cursos están diseñados para ti.");
-const reparacionesText = safeReadTxt("reparaciones.txt", "Ofrecemos servicios de reparación profesional.");
-const tiendaText = safeReadTxt("tienda.txt", "Bienvenido a nuestra tienda técnica.");
-
-const opcionesValidas = ["1", "2", "3", "4", "0"]
-
-// Conexión personalizada a MongoDB para consultas de productos/servicios
+// Conexión a MongoDB
 let db
-(async () => {
-    const client = new MongoClient(process.env.MONGO_DB_URI, { useUnifiedTopology: true })
-    await client.connect()
-    db = client.db('whatsappTEST') // Cambia si tu base real tiene otro nombre
+;(async () => {
+    try {
+        const client = new MongoClient(process.env.MONGO_DB_URI, { useUnifiedTopology: true })
+        await client.connect()
+        db = client.db('test')
+        console.log('✅ MongoDB conectado');
+    } catch (error) {
+        console.error('❌ Error MongoDB:', error);
+        db = null;
+    }
 })()
 
-// Buscar ítem en MongoDB (mejorado para variantes)
+// Buscar ítem en MongoDB
 async function buscarItem(mensaje) {
     if (!db) return null
     const texto = removeAccents(mensaje.trim().toLowerCase())
-    // Busca en cursos
-    let item = await db.collection('cursos').findOne({ nombre: { $regex: texto, $options: 'i' } })
-    if (item) return { tipo: 'curso', ...item }
-    // Busca en reparaciones
-    item = await db.collection('reparaciones').findOne({ nombre: { $regex: texto, $options: 'i' } })
-    if (item) return { tipo: 'reparacion', ...item }
-    // Busca en herramientas
-    item = await db.collection('herramientas').findOne({ nombre: { $regex: texto, $options: 'i' } })
-    if (item) return { tipo: 'herramienta', ...item }
-    return null
-}
-
-// Detección de intención desde texto (mejorada)
-const detectarIntencion = (text) => {
-    const lower = removeAccents(text.toLowerCase())
-
-    const intenciones = [
-        { keywords: ["curso", "cursos", "clase", "brochure", "estudiar", "capacitacion"], flow: "curso" },
-        { keywords: ["reparar", "reparacion", "falla", "arreglar", "celular", "pantalla", "laptop", "pc", "computadora"], flow: "reparaciones" },
-        { keywords: ["comprar", "precio", "herramienta", "vender", "producto", "tienda", "multimetro", "kit", "soldadura"], flow: "tienda" },
-        { keywords: ["consulta", "duda", "pregunta", "informacion", "ayuda", "soporte"], flow: "consultas" },
-    ]
-
-    for (const item of intenciones) {
-        if (item.keywords.some(p => lower.includes(p))) {
-            return item.flow
-        }
+    
+    // Buscar en todas las colecciones
+    const colecciones = ['cursos', 'reparaciones', 'herramientas']
+    const tipos = ['curso', 'reparacion', 'herramienta']
+    
+    for (let i = 0; i < colecciones.length; i++) {
+        const item = await db.collection(colecciones[i]).findOne({ 
+            nombre: { $regex: texto, $options: 'i' } 
+        })
+        if (item) return { tipo: tipos[i], ...item }
     }
-
     return null
 }
+
+// Obtener y formatear datos
+async function obtenerDatos(coleccion, titulo) {
+    if (!db) return "No hay conexión a la base de datos."
+    
+    try {
+        const datos = await db.collection(coleccion).find({}).toArray()
+        if (!datos.length) return `No hay ${titulo} disponibles.`
+        
+        let mensaje = `📋 *${titulo}:*\n\n`
+        datos.forEach((item, idx) => {
+            mensaje += `${idx + 1}. *${item.nombre}*`
+            if (item.precio) mensaje += ` - S/ ${item.precio}`
+            if (item.duracion) mensaje += ` - ${item.duracion}`
+            mensaje += '\n'
+        })
+        mensaje += '\n⏰ *Un asesor se comunicará contigo pronto.*'
+        return mensaje
+    } catch (error) {
+        console.error(`Error en ${coleccion}:`, error)
+        return `Error al obtener ${titulo}.`
+    }
+}
+
+// Registrar historial
+async function registrarHistory(from, origen) {
+    if (!db) return
+    try {
+        await db.collection('history').updateOne(
+            { from },
+            { $set: { from, origen, fecha: new Date() } },
+            { upsert: true }
+        )
+    } catch (error) {
+        console.error('Error registrando history:', error)
+    }
+}
+
+// FLOW: Usuarios desde la web de SmartCell
+const flowWebSmartCell = addKeyword(['web_smartcell', 'smartcell_web', 'desde_web', 'smartcell', 'academy_web', 'web_academy'])
+    .addAnswer(async (ctx, ctxFn) => {
+        console.log('🌐 Usuario desde web:', ctx.body)
+        
+        try {
+            const partes = ctx.body.split(':')
+            if (partes.length >= 3) {
+                const tipo = partes[1]
+                const nombre = partes[2]
+                const item = await buscarItem(nombre)
+                
+                if (item) {
+                    let mensaje = `*${item.tipo.toUpperCase()} SELECCIONADO:*\n\n`
+                    mensaje += `*${item.nombre}*\n`
+                    if (item.descripcion) mensaje += `${item.descripcion}\n`
+                    if (item.precio) mensaje += `Precio: S/ ${item.precio}\n`
+                    if (item.duracion) mensaje += `Duración: ${item.duracion}\n`
+                    mensaje += `\n✅ *¡Perfecto! Has seleccionado este ${item.tipo}.*\n\n`
+                    mensaje += `⏰ *En unos momentos un asesor se comunicará contigo.*\n\n`
+                    mensaje += `📞 *Mientras tanto:*\n• Escribe "menu" para más opciones\n• Escribe "consultar" para preguntas\n• Espera a que nuestro asesor te contacte`
+                    
+                    await ctxFn.flowDynamic(mensaje)
+                    await registrarHistory(ctx.from, `web_${item.tipo}`)
+                } else {
+                    await ctxFn.flowDynamic([
+                        "✅ *¡Gracias por tu interés en SmartCell Academy!*",
+                        "⏰ *En unos momentos un asesor se comunicará contigo.*",
+                        "📞 *Mientras tanto:*\n• Escribe \"menu\" para ver opciones\n• Escribe \"consultar\" para preguntas\n• Espera a que nuestro asesor te contacte"
+                    ])
+                    await registrarHistory(ctx.from, 'web_generico')
+                }
+            } else {
+                await ctxFn.flowDynamic([
+                    "✅ *¡Bienvenido desde SmartCell Academy!*",
+                    "⏰ *En unos momentos un asesor se comunicará contigo.*",
+                    "📞 *Mientras tanto:*\n• Escribe \"menu\" para ver opciones\n• Escribe \"consultar\" para preguntas\n• Espera a que nuestro asesor te contacte"
+                ])
+                await registrarHistory(ctx.from, 'web_bienvenida')
+            }
+        } catch (error) {
+            console.error('Error en flowWebSmartCell:', error)
+            await ctxFn.flowDynamic("Error. Escribe 'menu' para ver opciones.")
+        }
+    })
 
 // FLOW: Cursos
-const flowCurso = addKeyword(EVENTS.ACTION)
-    .addAnswer(cursoText, { capture: true, buttons: [
-        { body: "Ver menú" },
-        { body: "Consultar" },
-        { body: "Tienda" },
-        { body: "Salir" },
-    ] }, async (ctx, ctxFn) => {
-        try {
-            const input = ctx.body.trim();
-
-            const brochures = {
-                "1": {
-                    nombre: "Reparación de Laptops y PCs",
-                    archivo: path.join(__dirname, "mensajes/pdfs/Brochure_reparacion_de_computadoras.pdf"),
-                },
-                "2": {
-                    nombre: "Reparación de Celulares y Tablets",
-                    archivo: path.join(__dirname, "mensajes/pdfs/Brochure_de_reparacion_de_celulares.pdf"),
-                },
-                "3": {
-                    nombre: "Electrónica",
-                    archivo: path.join(__dirname, "mensajes/pdfs/Brochure_electronica.pdf"),
-                },
-                "4": {
-                    nombre: "Robótica",
-                    archivo: path.join(__dirname, "mensajes/pdfs/Brochure_robotica.pdf"),
-                },
-            }
-            
-            const brochure = brochures[input];
-
-            if (!brochure || !fs.existsSync(brochure.archivo)) {
-                return ctxFn.flowDynamic("❌ Opción no válida. Por favor escribe 1, 2, 3 o 4.");
-            }
-
-            await ctxFn.flowDynamic([
-                {
-                    body: `📄 Aquí tienes el brochure del curso *${brochure.nombre}*`,
-                    media: brochure.archivo,
-                }
-            
-            ])
-            return await ctxFn.flowDynamic("¿Deseas consultar sobre otro curso?");
-        } catch (error) {
-            console.error("❌ Error al enviar el brochure:", error);
-            await ctxFn.flowDynamic("Ocurrió un error al intentar enviarte el brochure. Intenta de nuevo más tarde.");
-        }
-    });
+const flowCurso = addKeyword(['cursos', 'curso', '1', 'ver cursos'])
+    .addAnswer(async (ctx, ctxFn) => {
+        const mensaje = await obtenerDatos('cursos', 'Nuestros cursos disponibles')
+        await ctxFn.flowDynamic(mensaje)
+    })
 
 // FLOW: Reparaciones
-const flowReparaciones = addKeyword(EVENTS.ACTION)
-    .addAnswer(reparacionesText, { buttons: [
-        { body: "Ver menú" },
-        { body: "Consultar" },
-        { body: "Tienda" },
-        { body: "Salir" },
-    ] })
+const flowReparaciones = addKeyword(['reparaciones', 'reparar', '2', 'arreglar'])
+    .addAnswer(async (ctx, ctxFn) => {
+        const mensaje = await obtenerDatos('reparaciones', 'Servicios de reparación')
+        await ctxFn.flowDynamic(mensaje)
+    })
 
 // FLOW: Tienda
-const flowTienda = addKeyword(EVENTS.ACTION)
-    .addAnswer(tiendaText, { buttons: [
-        { body: "Ver menú" },
-        { body: "Consultar" },
-        { body: "Ver cursos" },
-        { body: "Salir" },
-    ] })
+const flowTienda = addKeyword(['tienda', 'herramientas', '4', 'comprar'])
+    .addAnswer(async (ctx, ctxFn) => {
+        const mensaje = await obtenerDatos('herramientas', 'Herramientas disponibles')
+        await ctxFn.flowDynamic(mensaje)
+    })
 
 // FLOW: Consultas
-const flowConsultas = addKeyword(EVENTS.ACTION)
-    .addAnswer("Haz una consulta", { capture: true, buttons: [
-        { body: "Ver menú" },
-        { body: "Ver cursos" },
-        { body: "Tienda" },
-        { body: "Salir" },
-    ] }, async (ctx, ctxFn) => {
-        const answer = await chat(promptConsultas, ctx.body);
-        if (!answer?.content) {
-            return await ctxFn.flowDynamic("❌ No se pudo generar una respuesta. Intenta nuevamente.");
-        }
-        await ctxFn.flowDynamic(answer.content);
-    });
+const flowConsultas = addKeyword(['consultar', 'consulta', '3', 'pregunta', 'duda'])
+    .addAnswer('Por favor, escribe tu consulta y un asesor te contactará pronto.\n\nEscribe "menu" para volver al menú principal.', 
+        { capture: true }, 
+        async (ctx, ctxFn) => {
+            console.log('📝 Consulta recibida:', ctx.body)
+            await ctxFn.flowDynamic('¡Gracias! Tu consulta ha sido enviada a un asesor.')
+        })
 
-// FLOW: Nota de voz
-const flowVoice = addKeyword(EVENTS.VOICE_NOTE).addAnswer("🎤 Procesando tu nota de voz....", null, async (ctx, ctxFn) => {
-    const transcripcion  = await handlerAI(ctx);
-
-    if (transcripcion === "ERROR") {
-        return await ctxFn.flowDynamic("❌ Ocurrió un error al procesar tu nota de voz.");
-    }
-
-    const intencion = detectarIntencion(transcripcion);
-
-    switch (intencion) {
-        case "curso":
-            return gotoFlow(flowCurso);
-        case "reparaciones":
-            return gotoFlow(flowReparaciones);
-        case "tienda":
-            return gotoFlow(flowTienda);
-        case "consulta":
-            return gotoFlow(flowConsultas);
-        default:
-            return await flowDynamic("🤖 No entendí tu mensaje. ¿Podrías reformularlo o escribir *menu*?");
-    }
-});
-
-// FLOW: Bienvenida mejorado para detectar mensajes directos desde la web
+// FLOW: Bienvenida
 const flowWelcome = addKeyword(EVENTS.WELCOME)
-    .addAnswer(menu, { capture: true, buttons: [
-        { body: "Ver cursos" },
-        { body: "Reparaciones" },
-        { body: "Consultar" },
-        { body: "Tienda" },
-        { body: "Salir" },
-    ] }, async (ctx, {gotoFlow,fallBack,flowDynamic}) => {
-        // Si el usuario llega con un mensaje personalizado (desde la web)
-        if (ctx.body && ctx.body.length > 2) {
-            const item = await buscarItem(ctx.body);
-            if (item) {
-                await flowDynamic([
-                    { body: menu },
-                    { body: `*${item.tipo.toUpperCase()}*: ${item.nombre}\n${item.descripcion || ''}\nPrecio: S/ ${item.precio || 'Consultar'}` },
-                    { body: "¿Deseas más información, consultar sobre otro producto/servicio o ver el menú?", buttons: [
-                        { body: "Consultar" },
-                        { body: "Ver menú" },
-                        { body: "Volver" },
-                    ] }
-                ]);
-                return;
+    .addAnswer('Bienvenido a Smartcell Academy. ¿En qué podemos ayudarte?\n\n1. Cursos\n2. Reparaciones\n3. Consultar\n4. Tienda\n0. Salir', 
+        { capture: true }, 
+        async (ctx, {flowDynamic}) => {
+            await registrarHistory(ctx.from, 'bienvenida')
+            
+            const normalized = removeAccents(ctx.body.toLowerCase())
+            
+            if (["1", "cursos", "curso"].includes(normalized)) {
+                const mensaje = await obtenerDatos('cursos', 'Nuestros cursos disponibles')
+                await flowDynamic(mensaje)
+            } else if (["2", "reparaciones", "reparar"].includes(normalized)) {
+                const mensaje = await obtenerDatos('reparaciones', 'Servicios de reparación')
+                await flowDynamic(mensaje)
+            } else if (["3", "consultar", "consulta"].includes(normalized)) {
+                await flowDynamic('Haz una consulta.\n\nEscribe "menu" para volver al menú principal.')
+            } else if (["4", "tienda", "herramientas"].includes(normalized)) {
+                const mensaje = await obtenerDatos('herramientas', 'Herramientas disponibles')
+                await flowDynamic(mensaje)
+            } else if (["0", "salir"].includes(normalized)) {
+                await flowDynamic("Gracias por tu visita. Escribe *menu* cuando lo necesites.")
+            } else {
+                await flowDynamic("Opción no válida. Elige 1, 2, 3, 4 o 0.")
             }
-        }
-        // Normalizar para botones
-        const normalized = removeAccents(ctx.body.toLowerCase());
-        if (["ver cursos", "1"].includes(normalized)) return gotoFlow(flowCurso);
-        if (["reparaciones", "2"].includes(normalized)) return gotoFlow(flowReparaciones);
-        if (["consultar", "3"].includes(normalized)) return gotoFlow(flowConsultas);
-        if (["tienda", "4"].includes(normalized)) return gotoFlow(flowTienda);
-        if (["salir", "0"].includes(normalized)) return await flowDynamic("Gracias por tu visita. Puedes volver a escribir *Menu* cuando lo necesites.");
-        return fallBack("Respuesta no válida, elige una opción del menú o usa los botones.");
-    });
+        })
 
-// FLOW: Menú (permite volver a mostrar el menú y reiniciar contexto)
-const menuFlow = addKeyword("Menu").addAnswer(
-    menu,
-    { capture: true, buttons: [
-        { body: "Ver cursos" },
-        { body: "Reparaciones" },
-        { body: "Consultar" },
-        { body: "Tienda" },
-        { body: "Salir" },
-    ] },
-    async (ctx, {gotoFlow,fallBack,flowDynamic}) => {
-        const normalized = removeAccents(ctx.body.toLowerCase());
-        if (["ver cursos", "1"].includes(normalized)) return gotoFlow(flowCurso);
-        if (["reparaciones", "2"].includes(normalized)) return gotoFlow(flowReparaciones);
-        if (["consultar", "3"].includes(normalized)) return gotoFlow(flowConsultas);
-        if (["tienda", "4"].includes(normalized)) return gotoFlow(flowTienda);
-        if (["salir", "0"].includes(normalized)) return await flowDynamic("Saliendo... Puedes volver a acceder a este menú escribiendo '*Menu*'");
-        return fallBack("Respuesta no valida, elige una de las opciones del menu o usa los botones");
-    }
-)
-    
+// FLOW: Saludos
+const flowSaludos = addKeyword(['hola', 'buenos días', 'buenas', 'hello', 'hi', 'hey'])
+    .addAnswer('¡Hola! Bienvenido a Smartcell Academy.\n\n1. Cursos\n2. Reparaciones\n3. Consultar\n4. Tienda\n0. Salir')
+
+// FLOW: Menú global
+const menuGlobalFlow = addKeyword(['menu', 'Menu', 'MENU'])
+    .addAnswer('Menú principal:\n\n1. Cursos\n2. Reparaciones\n3. Consultar\n4. Tienda\n0. Salir',
+        { capture: true },
+        async (ctx, {flowDynamic}) => {
+            await registrarHistory(ctx.from, 'menu')
+            const normalized = removeAccents(ctx.body.toLowerCase())
+            
+            if (["1", "cursos", "curso"].includes(normalized)) {
+                const mensaje = await obtenerDatos('cursos', 'Nuestros cursos disponibles')
+                await flowDynamic(mensaje)
+            } else if (["2", "reparaciones", "reparar"].includes(normalized)) {
+                const mensaje = await obtenerDatos('reparaciones', 'Servicios de reparación')
+                await flowDynamic(mensaje)
+            } else if (["3", "consultar", "consulta"].includes(normalized)) {
+                await flowDynamic('Haz una consulta.\n\nEscribe "menu" para volver al menú principal.')
+            } else if (["4", "tienda", "herramientas"].includes(normalized)) {
+                const mensaje = await obtenerDatos('herramientas', 'Herramientas disponibles')
+                await flowDynamic(mensaje)
+            } else if (["0", "salir"].includes(normalized)) {
+                await flowDynamic("Saliendo... Escribe '*Menu*' para volver.")
+            } else {
+                await flowDynamic("Opción no válida. Elige 1, 2, 3, 4 o 0.")
+            }
+        })
+
+// FLOW: Fallback
+const fallbackFlow = addKeyword(EVENTS.ACTION)
+    .addAnswer("No entendí tu mensaje. Escribe:\n• 1 o cursos\n• 2 o reparaciones\n• 3 o consultar\n• 4 o tienda\n• menu para el menú\n• 0 para salir")
+
 // Inicialización del bot
 const main = async () => {
     const adapterDB = new MongoAdapter({
         dbUri: process.env.MONGO_DB_URI,
         dbname: "whatsappTEST"
     })
-    const adapterFlow = createFlow([flowWelcome, menuFlow, flowCurso, flowReparaciones, flowTienda, flowConsultas, flowVoice])   
-    const adapterProvider = createProvider(BaileysProvider)
+    
+    const adapterFlow = createFlow([
+        flowWebSmartCell, 
+        flowWelcome, 
+        flowSaludos, 
+        menuGlobalFlow, 
+        flowCurso, 
+        flowReparaciones, 
+        flowTienda, 
+        flowConsultas, 
+        fallbackFlow
+    ])
+    
+    const adapterProvider = createProvider(BaileysProvider, {
+        printQRInTerminal: true,
+        auth: { creds: {}, keys: {} },
+        connectTimeoutMs: 60000,
+        qrTimeout: 60000,
+        defaultQueryTimeoutMs: 60000,
+        retryRequestDelayMs: 1000,
+        markOnlineOnConnect: false,
+        generateHighQualityLinkPreview: false,
+        browser: ['Smartcell Academy Bot', 'Chrome', '1.0.0'],
+        version: [2, 2323, 4],
+        logger: { level: 'error' },
+        shouldIgnoreJid: jid => jid.includes('@broadcast'),
+        patchMessageBeforeSending: (msg) => {
+            const requiresPatch = !!(msg.buttonsMessage || msg.templateMessage || msg.listMessage)
+            if (requiresPatch) {
+                msg = {
+                    viewOnceMessage: {
+                        message: {
+                            messageContextInfo: {
+                                deviceListMetadataVersion: 2,
+                                deviceListMetadata: {},
+                            },
+                            ...msg,
+                        },
+                    },
+                }
+            }
+            return msg
+        },
+    })
 
     createBot({
         flow: adapterFlow,
@@ -254,7 +270,30 @@ const main = async () => {
         database: adapterDB,
     })
 
-    QRPortalWeb()
+    QRPortalWeb({ port: 5001 })
 }
 
 main()
+
+// Manejo de errores
+process.on('uncaughtException', (err) => {
+    console.error('❌ Excepción no capturada:', err.message)
+})
+
+process.on('unhandledRejection', (reason) => {
+    if (reason && reason.message && 
+        (reason.message.includes('Timed Out') || reason.message.includes('connection'))) {
+        return
+    }
+    console.error('❌ Rechazo de promesa:', reason)
+})
+
+process.on('SIGINT', () => {
+    console.log('🛑 Cerrando bot...')
+    process.exit(0)
+})
+
+process.on('SIGTERM', () => {
+    console.log('🛑 Cerrando bot...')
+    process.exit(0)
+})
